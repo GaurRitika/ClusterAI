@@ -4,7 +4,7 @@ import { PointerLockControls, useGLTF, Box, Plane } from '@react-three/drei'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorPanel from './ErrorPanel'
 import './ArenaView.css'
-import * as THREE from 'three'
+
 
 interface ArenaViewProps {
   onBack: () => void
