@@ -10,7 +10,7 @@ interface ArenaViewProps {
   onBack: () => void
 }
 
-const ARENA_MODEL_URL = '/models/soni.glb';
+const ARENA_MODEL_URL = '/models/sonii.glb';
 
 // Fallback procedural arena
 const FallbackArena: React.FC = () => {
