@@ -9,7 +9,7 @@ interface ArenaViewProps {
   onBack: () => void
 }
 
-const ARENA_MODEL_URL = '/models/free_skybox_enchanted_forest.glb';
+const ARENA_MODEL_URL = '/models/soni.glb';
 
 
 const Arena: React.FC = () => {
