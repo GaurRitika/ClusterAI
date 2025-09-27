@@ -9,7 +9,8 @@ interface ArenaViewProps {
   onBack: () => void
 }
 
-const ARENA_MODEL_URL = 'https://drive.google.com/uc?export=download&id=1DcjmKgArwf955QnF0qHikLh_t7wBlEte'
+const ARENA_MODEL_URL = 'https://github.com/GaurRitika/ClusterAI/releases/download/v1.0/free_-_skybox_enchanted_forest.glb
+'
 
 const Arena: React.FC = () => {
   try {
