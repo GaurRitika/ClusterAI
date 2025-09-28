@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { PointerLockControls, useGLTF, Box, Plane } from '@react-three/drei'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorPanel from './ErrorPanel'
+import ModelDiagnostic from './ModelDiagnostic'
 import './ArenaView.css'
 
 
@@ -10,74 +11,26 @@ interface ArenaViewProps {
   onBack: () => void
 }
 
-const ARENA_MODEL_URL = '/models/sonii.glb';
+const ARENA_MODEL_URLS = [
+  '/models/sonii.glb', // Local file in public/models/
+  'https://raw.githubusercontent.com/GaurRitika/ClusterAI/main/public/models/sonii.glb', // GitHub raw URL
+  'https://github.com/GaurRitika/ClusterAI/raw/main/public/models/sonii.glb', // Alternative GitHub raw URL
+]
 
-// Fallback procedural arena
-const FallbackArena: React.FC = () => {
-  return (
-    <group>
-      {/* Ground plane */}
-      <Plane 
-        args={[50, 50]} 
-        rotation={[-Math.PI / 2, 0, 0]} 
-        position={[0, -1, 0]}
-      >
-        <meshStandardMaterial color="#2a2a2a" />
-      </Plane>
-      
-      {/* Arena walls */}
-      <Box args={[1, 8, 50]} position={[25, 3, 0]}>
-        <meshStandardMaterial color="#404040" />
-      </Box>
-      <Box args={[1, 8, 50]} position={[-25, 3, 0]}>
-        <meshStandardMaterial color="#404040" />
-      </Box>
-      <Box args={[50, 8, 1]} position={[0, 3, 25]}>
-        <meshStandardMaterial color="#404040" />
-      </Box>
-      <Box args={[50, 8, 1]} position={[0, 3, -25]}>
-        <meshStandardMaterial color="#404040" />
-      </Box>
-      
-      {/* Some decorative elements */}
-      <Box args={[2, 2, 2]} position={[10, 0, 10]}>
-        <meshStandardMaterial color="#ff6b6b" />
-      </Box>
-      <Box args={[2, 2, 2]} position={[-10, 0, -10]}>
-        <meshStandardMaterial color="#4ecdc4" />
-      </Box>
-      <Box args={[2, 2, 2]} position={[10, 0, -10]}>
-        <meshStandardMaterial color="#45b7d1" />
-      </Box>
-      <Box args={[2, 2, 2]} position={[-10, 0, 10]}>
-        <meshStandardMaterial color="#f9ca24" />
-      </Box>
-    </group>
-  )
-}
-
-const Arena: React.FC = () => {
-  const [usesFallback, setUsesFallback] = useState(false)
-  
-  if (usesFallback) {
-    return <FallbackArena />
-  }
-
+const Arena: React.FC<{ modelUrl: string }> = ({ modelUrl }) => {
   try {
-    const { scene } = useGLTF(ARENA_MODEL_URL)
+    console.log('Loading GLB model from:', modelUrl)
+    const gltf = useGLTF(modelUrl)
     
-    // Validate the loaded model
-    if (!scene || !scene.children || scene.children.length === 0) {
-      console.warn('Loaded GLB model appears to be empty, using fallback arena')
-      setUsesFallback(true)
-      return <FallbackArena />
+    if (!gltf || !gltf.scene) {
+      throw new Error('GLB model loaded but scene is empty')
     }
     
-    return <primitive object={scene} />
+    console.log('GLB model loaded successfully:', gltf)
+    return <primitive object={gltf.scene} />
   } catch (error) {
-    console.error('Failed to load GLB model:', error)
-    setUsesFallback(true)
-    return <FallbackArena />
+    console.error('Error loading GLB model:', error)
+    throw error
   }
 }
 
@@ -85,57 +38,52 @@ const ArenaView: React.FC<ArenaViewProps> = ({ onBack }) => {
   const [isPointerLocked, setIsPointerLocked] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [modelLoadError, setModelLoadError] = useState<string | null>(null)
+  const [currentModelIndex, setCurrentModelIndex] = useState(0)
+  const [currentModelUrl, setCurrentModelUrl] = useState(ARENA_MODEL_URLS[0])
 
   useEffect(() => {
-    // Check if the GLB file is accessible and valid
-    const checkModel = async () => {
-      try {
-        const response = await fetch(ARENA_MODEL_URL)
-        if (!response.ok) {
-          throw new Error(`Failed to fetch model: ${response.status} ${response.statusText}`)
-        }
-        
-        const contentLength = response.headers.get('content-length')
-        if (contentLength && parseInt(contentLength) < 100) {
-          throw new Error('Model file appears to be too small or empty')
-        }
-        
-        // Try to read a bit of the file to validate it's not just text
-        const arrayBuffer = await response.arrayBuffer()
-        if (arrayBuffer.byteLength < 100) {
-          throw new Error('Model file is too small to be a valid GLB')
-        }
-        
-        // Check for GLB magic number (first 4 bytes should be 'glTF')
-        const view = new DataView(arrayBuffer)
-        const magic = view.getUint32(0, true)
-        if (magic !== 0x46546C67) { // 'glTF' in little endian
-          console.warn('File does not appear to be a valid GLB file, but continuing anyway...')
-        }
-        
-        setIsLoading(false)
-      } catch (error) {
-        console.error('Model validation failed:', error)
-        setModelLoadError(error instanceof Error ? error.message : 'Unknown error')
-        setIsLoading(false)
-      }
-    }
+    console.log(`Attempting to load model from: ${currentModelUrl}`)
+    setIsLoading(true)
+    setHasError(false)
+    
+    // Simple timeout to allow model loading
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false)
+    }, 3000) // Give more time for GLB loading
+    
+    return () => clearTimeout(loadingTimer)
+  }, [currentModelIndex, currentModelUrl])
 
-    checkModel()
-  }, [])
+  // Handle model loading errors from the ErrorBoundary
+  const handleModelError = () => {
+    console.error(`Failed to load model from ${currentModelUrl}`)
+    console.log(`Trying model ${currentModelIndex + 1} of ${ARENA_MODEL_URLS.length}`)
+    
+    // Try next URL if available
+    if (currentModelIndex < ARENA_MODEL_URLS.length - 1) {
+      const nextIndex = currentModelIndex + 1
+      console.log(`Switching to next model URL: ${ARENA_MODEL_URLS[nextIndex]}`)
+      setCurrentModelIndex(nextIndex)
+      setCurrentModelUrl(ARENA_MODEL_URLS[nextIndex])
+    } else {
+      console.error('All model URLs failed to load')
+      setHasError(true)
+      setIsLoading(false)
+    }
+  }
 
   const handleRetry = () => {
     setHasError(false)
-    setModelLoadError(null)
     setIsLoading(true)
-    // Force re-render by clearing the GLTF cache
-    useGLTF.clear(ARENA_MODEL_URL)
+    setCurrentModelIndex(0)
+    setCurrentModelUrl(ARENA_MODEL_URLS[0])
     
-    // Re-check the model
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
+    // Clear GLTF cache for all URLs
+    ARENA_MODEL_URLS.forEach(url => {
+      useGLTF.clear(url)
+    })
+
+
   }
 
   if (hasError) {
@@ -153,6 +101,8 @@ const ArenaView: React.FC<ArenaViewProps> = ({ onBack }) => {
 
   return (
     <div className="arena-view">
+      <ModelDiagnostic modelUrl={currentModelUrl} />
+      
       <button className="back-button" onClick={onBack}>
         <span className="back-icon">←</span>
         Back
@@ -185,8 +135,8 @@ const ArenaView: React.FC<ArenaViewProps> = ({ onBack }) => {
         />
         
         <Suspense fallback={null}>
-          <ErrorBoundary onError={() => setHasError(true)}>
-            <Arena />
+          <ErrorBoundary onError={handleModelError}>
+            <Arena modelUrl={currentModelUrl} />
           </ErrorBoundary>
         </Suspense>
         
@@ -227,6 +177,8 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-// Note: Model preloading is handled in the component with validation
+
+useGLTF.preload(ARENA_MODEL_URLS[0])
+
 
 export default ArenaView

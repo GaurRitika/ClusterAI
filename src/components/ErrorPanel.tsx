@@ -13,7 +13,10 @@ const ErrorPanel: React.FC<ErrorPanelProps> = ({ onRetry, onBack }) => {
         <div className="error-icon">⚠️</div>
         <h2 className="error-title">Failed to Load Arena</h2>
         <p className="error-message">
-          We couldn't load the 3D arena. This might be due to a network issue or the model file being temporarily unavailable.
+          We couldn't load the 3D arena model. Please check that:
+          <br />• The GLB file exists at `/public/models/sonii.glb`
+          <br />• The file is a valid GLB format
+          <br />• Your GitHub repository has the correct file path
         </p>
         <div className="error-buttons">
           <button className="retry-button" onClick={onRetry}>
