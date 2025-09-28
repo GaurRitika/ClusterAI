@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { PointerLockControls, useGLTF } from '@react-three/drei'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorPanel from './ErrorPanel'
+import ModelDiagnostic from './ModelDiagnostic'
 import './ArenaView.css'
 
 interface ArenaViewProps {
@@ -11,15 +12,22 @@ interface ArenaViewProps {
 
 // Try multiple model URLs - adjust these based on your GitHub setup
 const ARENA_MODEL_URLS = [
-  '/models/soni.glb', // Local file in public/models/
-  'https://raw.githubusercontent.com/GaurRitika/ClusterAI/main/public/models/soni.glb', // GitHub raw URL
-  'https://github.com/GaurRitika/ClusterAI/raw/main/public/models/soni.glb', // Alternative GitHub raw URL
+  '/models/sonii.glb', // Local file in public/models/
+  'https://raw.githubusercontent.com/GaurRitika/ClusterAI/main/public/models/sonii.glb', // GitHub raw URL
+  'https://github.com/GaurRitika/ClusterAI/raw/main/public/models/sonii.glb', // Alternative GitHub raw URL
 ]
 
 const Arena: React.FC<{ modelUrl: string }> = ({ modelUrl }) => {
   try {
-    const { scene } = useGLTF(modelUrl)
-    return <primitive object={scene} />
+    console.log('Loading GLB model from:', modelUrl)
+    const gltf = useGLTF(modelUrl)
+    
+    if (!gltf || !gltf.scene) {
+      throw new Error('GLB model loaded but scene is empty')
+    }
+    
+    console.log('GLB model loaded successfully:', gltf)
+    return <primitive object={gltf.scene} />
   } catch (error) {
     console.error('Error loading GLB model:', error)
     throw error
@@ -34,45 +42,35 @@ const ArenaView: React.FC<ArenaViewProps> = ({ onBack }) => {
   const [currentModelUrl, setCurrentModelUrl] = useState(ARENA_MODEL_URLS[0])
 
   useEffect(() => {
-    // Test model loading with current URL
-    const testModelLoad = async () => {
-      try {
-        console.log(`Attempting to load model from: ${currentModelUrl}`)
-        setIsLoading(true)
-        setHasError(false)
-        
-        // Try to fetch the model to check if it exists
-        const response = await fetch(currentModelUrl, { method: 'HEAD' })
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`)
-        }
-        
-        console.log(`Model URL accessible: ${currentModelUrl}`)
-        
-        // If successful, wait a bit more for actual loading
-        setTimeout(() => {
-          setIsLoading(false)
-        }, 1000)
-      } catch (error) {
-        console.error(`Failed to load model from ${currentModelUrl}:`, error)
-        console.log(`Trying model ${currentModelIndex + 1} of ${ARENA_MODEL_URLS.length}`)
-        
-        // Try next URL if available
-        if (currentModelIndex < ARENA_MODEL_URLS.length - 1) {
-          const nextIndex = currentModelIndex + 1
-          console.log(`Switching to next model URL: ${ARENA_MODEL_URLS[nextIndex]}`)
-          setCurrentModelIndex(nextIndex)
-          setCurrentModelUrl(ARENA_MODEL_URLS[nextIndex])
-        } else {
-          console.error('All model URLs failed to load')
-          setHasError(true)
-          setIsLoading(false)
-        }
-      }
-    }
-
-    testModelLoad()
+    console.log(`Attempting to load model from: ${currentModelUrl}`)
+    setIsLoading(true)
+    setHasError(false)
+    
+    // Simple timeout to allow model loading
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false)
+    }, 3000) // Give more time for GLB loading
+    
+    return () => clearTimeout(loadingTimer)
   }, [currentModelIndex, currentModelUrl])
+
+  // Handle model loading errors from the ErrorBoundary
+  const handleModelError = () => {
+    console.error(`Failed to load model from ${currentModelUrl}`)
+    console.log(`Trying model ${currentModelIndex + 1} of ${ARENA_MODEL_URLS.length}`)
+    
+    // Try next URL if available
+    if (currentModelIndex < ARENA_MODEL_URLS.length - 1) {
+      const nextIndex = currentModelIndex + 1
+      console.log(`Switching to next model URL: ${ARENA_MODEL_URLS[nextIndex]}`)
+      setCurrentModelIndex(nextIndex)
+      setCurrentModelUrl(ARENA_MODEL_URLS[nextIndex])
+    } else {
+      console.error('All model URLs failed to load')
+      setHasError(true)
+      setIsLoading(false)
+    }
+  }
 
   const handleRetry = () => {
     setHasError(false)
@@ -96,6 +94,8 @@ const ArenaView: React.FC<ArenaViewProps> = ({ onBack }) => {
 
   return (
     <div className="arena-view">
+      <ModelDiagnostic modelUrl={currentModelUrl} />
+      
       <button className="back-button" onClick={onBack}>
         <span className="back-icon">←</span>
         Back
@@ -123,7 +123,7 @@ const ArenaView: React.FC<ArenaViewProps> = ({ onBack }) => {
         />
         
         <Suspense fallback={null}>
-          <ErrorBoundary onError={() => setHasError(true)}>
+          <ErrorBoundary onError={handleModelError}>
             <Arena modelUrl={currentModelUrl} />
           </ErrorBoundary>
         </Suspense>

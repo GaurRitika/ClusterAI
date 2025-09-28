@@ -14,7 +14,7 @@ const ErrorPanel: React.FC<ErrorPanelProps> = ({ onRetry, onBack }) => {
         <h2 className="error-title">Failed to Load Arena</h2>
         <p className="error-message">
           We couldn't load the 3D arena model. Please check that:
-          <br />• The GLB file exists at `/public/models/soni.glb`
+          <br />• The GLB file exists at `/public/models/sonii.glb`
           <br />• The file is a valid GLB format
           <br />• Your GitHub repository has the correct file path
         </p>
