@@ -1,16 +1,16 @@
 import React, { Suspense, useState, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { PointerLockControls, useGLTF } from '@react-three/drei'
+import { PointerLockControls, useGLTF, Box, Plane } from '@react-three/drei'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorPanel from './ErrorPanel'
 import ModelDiagnostic from './ModelDiagnostic'
 import './ArenaView.css'
 
+
 interface ArenaViewProps {
   onBack: () => void
 }
 
-// Try multiple model URLs - adjust these based on your GitHub setup
 const ARENA_MODEL_URLS = [
   '/models/sonii.glb', // Local file in public/models/
   'https://raw.githubusercontent.com/GaurRitika/ClusterAI/main/public/models/sonii.glb', // GitHub raw URL
@@ -82,6 +82,8 @@ const ArenaView: React.FC<ArenaViewProps> = ({ onBack }) => {
     ARENA_MODEL_URLS.forEach(url => {
       useGLTF.clear(url)
     })
+
+
   }
 
   if (hasError) {
@@ -90,6 +92,11 @@ const ArenaView: React.FC<ArenaViewProps> = ({ onBack }) => {
 
   if (isLoading) {
     return <LoadingSpinner />
+  }
+
+  // Show error message if model validation failed, but still render the fallback arena
+  if (modelLoadError) {
+    console.warn(`Model loading issue: ${modelLoadError}. Using fallback arena.`)
   }
 
   return (
@@ -104,6 +111,11 @@ const ArenaView: React.FC<ArenaViewProps> = ({ onBack }) => {
       {!isPointerLocked && (
         <div className="controls-hint">
           <p>Click to lock pointer. Use WASD to move.</p>
+          {modelLoadError && (
+            <p style={{ color: '#ff6b6b', fontSize: '0.9em', marginTop: '8px' }}>
+              ⚠️ Using fallback arena (model loading failed)
+            </p>
+          )}
         </div>
       )}
 
@@ -165,7 +177,8 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-// Preload the first model URL
+
 useGLTF.preload(ARENA_MODEL_URLS[0])
+
 
 export default ArenaView
