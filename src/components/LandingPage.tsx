@@ -14,9 +14,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onEnterArena }) => {
         <button 
           className="enter-button"
           onClick={onEnterArena}
-          aria-label="Enter the ClusterAI metaverse"
+          aria-label="Enter the 3D Metaverse"
         >
-          Enter ClusterAI
+          Enter the 3D Metaverse
         </button>
       </div>
     </div>

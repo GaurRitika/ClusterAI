@@ -10,7 +10,7 @@ interface ArenaViewProps {
   onBack: () => void
 }
 
-const ARENA_MODEL_URL = '/models/sonii.glb';
+const ARENA_MODEL_URL = import.meta.env.BASE_URL + 'models/sonii.glb'
 
 // Fallback procedural arena
 const FallbackArena: React.FC = () => {
@@ -57,28 +57,15 @@ const FallbackArena: React.FC = () => {
 }
 
 const Arena: React.FC = () => {
-  const [usesFallback, setUsesFallback] = useState(false)
-  
-  if (usesFallback) {
+  const { scene } = useGLTF(ARENA_MODEL_URL)
+
+  // Validate the loaded model
+  if (!scene || !scene.children || scene.children.length === 0) {
+    console.warn('Loaded GLB model appears to be empty, rendering fallback arena')
     return <FallbackArena />
   }
 
-  try {
-    const { scene } = useGLTF(ARENA_MODEL_URL)
-    
-    // Validate the loaded model
-    if (!scene || !scene.children || scene.children.length === 0) {
-      console.warn('Loaded GLB model appears to be empty, using fallback arena')
-      setUsesFallback(true)
-      return <FallbackArena />
-    }
-    
-    return <primitive object={scene} />
-  } catch (error) {
-    console.error('Failed to load GLB model:', error)
-    setUsesFallback(true)
-    return <FallbackArena />
-  }
+  return <primitive object={scene} />
 }
 
 const ArenaView: React.FC<ArenaViewProps> = ({ onBack }) => {
